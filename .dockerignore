@@ -1,0 +1,11 @@
+.git
+.github
+materials
+output
+backend/data
+backend/__pycache__
+frontend/node_modules
+frontend/dist
+**/__pycache__
+**/*.pyc
+*.tsbuildinfo

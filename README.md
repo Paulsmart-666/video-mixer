@@ -99,6 +99,18 @@ cd backend && python3 run.py    # 后端在 8000 统一托管前端
 
 > 注：v1.0.1 已补全此前缺失的前端源码模块（`src/types`、`src/api/client.ts`、`src/store/useAppStore.ts`、`vite.config.ts`）。此前 `.gitignore` 误写了 `*.ts`（本意忽略 `.ts` 视频文件），却把 TypeScript 源码一并忽略，导致 `pnpm build` 必挂，已在 v1.0.1 修复（详见 `更新日志.md`）。
 
+### 免费常驻部署（ClawCloud Run）
+
+想要一个**免费、国内可直连、关掉也一直在**的地址，推荐用 [ClawCloud Run](https://claw.cloud)（爪云）：绑定 GitHub 即可开通、**无需信用卡**，免费档给 4 核 8G + 持久卷、容器常驻不休眠。
+
+仓库根目录已提供 `Dockerfile`（多阶段：Node 构建前端 + Ubuntu/Python 3.11/ffmpeg 运行，uvicorn 监听 8000）。步骤与卷挂载见 **[部署指南.md](部署指南.md)**，核心三步：
+
+1. 用 `Dockerfile` 构建镜像（自动装 ffmpeg、构建前端）；
+2. 把 `materials/`、`output/`、`backend/data` 挂到持久卷，重部署不丢素材与成片；
+3. 访问分配的域名，体验同沙箱在线版。
+
+> 同类的永久免费常驻还有 Oracle Cloud Always Free（需信用卡、境外节点、配置更强），详见部署指南。
+
 ### 在线测试指引
 
 1. 打开上面的公网链接。
