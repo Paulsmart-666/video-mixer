@@ -4,6 +4,7 @@ import { updateSettings } from '@/api/client';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '../common/Button';
 import { DirPickerDialog } from '../common/DirPickerDialog';
+import { APP_VERSION } from '@/version';
 
 export function TopBar() {
   const { settings, refreshLibrary, updateSettings: updateStoreSettings } = useAppStore();
@@ -36,6 +37,9 @@ export function TopBar() {
           <Settings className="h-5 w-5" />
         </div>
         <h1 className="text-base font-semibold text-text">视频混剪工具</h1>
+        <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+          v{APP_VERSION}
+        </span>
       </div>
 
       <div className="flex items-center gap-3">
