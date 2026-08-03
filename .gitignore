@@ -1,0 +1,35 @@
+# 依赖
+node_modules/
+__pycache__/
+*.pyc
+backend/data/probe_cache.json
+
+# 前端构建产物
+frontend/dist/
+
+# 素材与成片（大文件，不入库）
+materials/
+output/
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.flv
+*.wmv
+*.m4v
+*.ts
+*.webm
+*.3gp
+*.mpg
+*.mpeg
+
+# 沙箱/环境配置
+.cloudstudio
+.codebuddy/
+
+# TypeScript 构建缓存
+*.tsbuildinfo
+
+# 杂项
+package-lock.json
+npm-debug.log*
