@@ -1,0 +1,104 @@
+// 后端 API 客户端
+// 端点在 backend/app/routers 下：/api/library /api/compose /api/files /api/settings
+import type {
+  BatchState,
+  BrowseResponse,
+  ComposeRequest,
+  LibrarySnapshot,
+  MaterialClip,
+  SettingsResponse,
+} from '@/types';
+
+async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const data = await res.json();
+      detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data);
+    } catch {
+      detail = await res.text();
+    }
+    throw new Error(detail || `请求失败 (${res.status})`);
+  }
+  return (await res.json()) as T;
+}
+
+export function getSettings(): Promise<SettingsResponse> {
+  return request<SettingsResponse>('/api/settings');
+}
+
+export function updateSettings(payload: {
+  material_root?: string;
+  output_dir?: string;
+  concurrency?: number;
+}): Promise<SettingsResponse> {
+  return request<SettingsResponse>('/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getLibrary(): Promise<LibrarySnapshot> {
+  return request<LibrarySnapshot>('/api/library');
+}
+
+export function refreshLibrary(): Promise<LibrarySnapshot> {
+  return request<LibrarySnapshot>('/api/library/refresh', { method: 'POST' });
+}
+
+export function deleteClip(clip_id: string): Promise<{ ok: boolean; id: string }> {
+  const qs = new URLSearchParams({ clip_id });
+  return request(`/api/library/clip?${qs.toString()}`, { method: 'DELETE' });
+}
+
+export function deleteClips(clip_ids: string[]): Promise<{
+  ok: boolean;
+  deleted: string[];
+  not_found: string[];
+}> {
+  return request('/api/library/clips', {
+    method: 'DELETE',
+    body: JSON.stringify({ clip_ids }),
+  });
+}
+
+export function uploadClip(category: string, file: File): Promise<MaterialClip> {
+  const form = new FormData();
+  form.append('category', category);
+  form.append('file', file);
+  // 注意：FormData 不能手动设 Content-Type，由浏览器自动带 multipart 边界
+  return request<MaterialClip>('/api/library/upload', { method: 'POST', body: form });
+}
+
+export function createCompose(req: ComposeRequest): Promise<BatchState> {
+  return request<BatchState>('/api/compose', {
+    method: 'POST',
+    body: JSON.stringify(req),
+  });
+}
+
+export function getBatch(batch_id: string): Promise<BatchState> {
+  return request<BatchState>(`/api/compose/batches/${batch_id}`);
+}
+
+export function cancelBatch(batch_id: string): Promise<BatchState> {
+  return request<BatchState>(`/api/compose/batches/${batch_id}/cancel`, { method: 'POST' });
+}
+
+export function browseFiles(path: string): Promise<BrowseResponse> {
+  const qs = new URLSearchParams({ path });
+  return request<BrowseResponse>(`/api/files/browse?${qs.toString()}`);
+}
+
+// 拼接成片下载链接（后端 /api/files/download?path=...）
+export function downloadUrl(path: string | null): string {
+  const qs = new URLSearchParams({ path: path ?? '' });
+  return `/api/files/download?${qs.toString()}`;
+}
