@@ -67,60 +67,82 @@ cd backend && python3 run.py    # 访问 http://localhost:8000
 - 组合算法：小组合空间穷举去重，大空间拒绝采样，保证不重复且不超过时长上限。
 - 合成路径：编码参数一致时走 `concat -c copy` 快速路径；否则走 `filter_complex` 统一画布（缩放 + 黑边）后编码。
 
-## 在线体验与部署
+## 项目方向
 
-目前已在沙箱中以**生产模式单端口（8000）**运行，后端托管前端 `frontend/dist`，并通过发布能力暴露为公网链接，可直接在浏览器使用：
+本项目定位是**本地运行的桌面工具**，不依赖公网服务器，素材与成片全部保存在本地磁盘。
 
-> 🌐 **在线地址：https://a6cd9bf1c9414b309.sh7.agentos-app.net**
+- **当前阶段**：在本地以 FastAPI + React 的 Web 技术栈运行，浏览器访问 `http://localhost:8000`。
+- **最终目标**：开发成熟后打包为 **Windows 单机 EXE 应用**，用户下载后双击运行，无需安装 Python / Node / ffmpeg。
+- **不再维护公网部署**：此前的沙箱公网地址已随实例回收失效，且本项目依赖本地 ffmpeg 与持久磁盘，不适合 Serverless / 静态托管，以后不再提供公网入口。
 
-打开即可使用：左侧素材库、中间爆款合成、右侧产出进度，实时轮询并下载成片。
+### 为什么不部署到 Vercel / 静态托管
 
-### 关于部署平台（Vercel 不适用）
-
-本项目是**本地运行的工具，无自动部署平台**。它依赖常驻进程与本地 ffmpeg，因此不适合部署到 Vercel 这类 Serverless 平台：
-
-| 依赖 | Vercel 现状 | 结论 |
-|------|------------|------|
-| 常驻 FastAPI 服务 + 线程池 | 函数无状态、超时（默认 10s / Pro 上限 60s） | ❌ |
+| 依赖 | Serverless 现状 | 结论 |
+|------|----------------|------|
+| 常驻 FastAPI 服务 + 线程池 | 函数无状态、超时短 | ❌ |
 | ffmpeg 视频合成（CPU 密集、长耗时） | 运行时无 ffmpeg，且超时不够 | ❌ |
 | 持久磁盘保存素材库 + 成片 | `/tmp` 临时、实例隔离 | ❌ |
-| 前端静态站 | 本身能上 Vercel | ✅（但没后端跑不起来） |
+| 前端静态站 | 能上静态托管 | ✅（但没后端跑不起来） |
 
-正确归宿是**有常驻进程 + 可装 ffmpeg + 持久磁盘**的环境：VPS / Railway / Render / Fly.io / 或本沙箱。
+## 本地运行方式
 
-### 沙箱部署方式
+### 方式一：生产模式（推荐，单端口）
 
-在具备常驻进程、ffmpeg（libopenh264）、Python 3.11、pnpm 与外网出口的沙箱里，按「生产模式单端口」运行即可：
+已安装 Python 与 npm 的 Windows / macOS / Linux 环境：
 
 ```bash
-cd frontend && pnpm build      # 构建到 frontend/dist
-cd backend && python3 run.py    # 后端在 8000 统一托管前端
+# 1. 安装后端依赖（创建 venv 并安装）
+cd backend
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt imageio-ffmpeg static-ffmpeg
+
+# 2. 构建前端
+cd ../frontend
+npm install
+npm run build
+
+# 3. 启动后端（自动托管前端 dist，访问 http://localhost:8000）
+cd ../backend
+.venv\Scripts\python run.py
 ```
 
-> 注：v1.0.1 已补全此前缺失的前端源码模块（`src/types`、`src/api/client.ts`、`src/store/useAppStore.ts`、`vite.config.ts`）。此前 `.gitignore` 误写了 `*.ts`（本意忽略 `.ts` 视频文件），却把 TypeScript 源码一并忽略，导致 `pnpm build` 必挂，已在 v1.0.1 修复（详见 `更新日志.md`）。
+> Windows 路径用反斜杠；macOS/Linux 请换成 `.venv/bin/python` 与 `/`。
 
-### 免费常驻部署（Oracle Cloud Always Free）
+### 方式二：开发模式（前后端分离）
 
-> 2026-08 更新：此前推荐的 **ClawCloud Run 已停服**（2026-05-11 停服，VPS/VDS 2026-06-30 全面关停），无法再使用。
+```bash
+# 终端 1：启动后端
+cd backend
+.venv\Scripts\python run.py
 
-想要一个**真正永久免费 + 常驻不睡**的地址，推荐用 [Oracle Cloud Always Free](https://www.oracle.com/cn/cloud/free/)：2× AMD VM（1G） 或 4× ARM VM（4核24G） + 200G 块存储 + 每月 10TB 出站流量。仓库根目录已提供 `Dockerfile`（多阶段：Node 构建前端 + Ubuntu 22.04（系统 Python 3.10）/ffmpeg 运行，uvicorn 监听 8000）。
+# 终端 2：启动前端 dev server
+cd frontend
+npm run dev
+```
 
-部署步骤与卷挂载见 **[部署指南.md](部署指南.md)**，核心三步：
+前端访问 `http://localhost:5173`，后端 API 在 `http://localhost:8000`，dev server 已配置代理。
 
-1. 在 Oracle Cloud 创建 Always Free Ubuntu 22.04 实例，安装 Docker，克隆本仓库，`docker build -t video-mixer .`；
-2. 把 `materials/`、`output/`、`backend/data` 挂到持久目录（`-v`），重部署/重启不丢素材与成片；
-3. 放行安全组 TCP 8000，访问 `http://<公网IP>:8000`。
+### 关于 ffmpeg
 
-> 要国内节点/不想绑信用卡，可用**雨云 (RainYun)** 等低价国内 VPS（~30元/月起），Docker 部署方式完全相同。详见部署指南「备选平台」。
+后端启动时会自动检测 H.264 编码器。若使用 venv，推荐同时安装 `imageio-ffmpeg` 与 `static-ffmpeg`，并把 ffmpeg/ffprobe 复制到 `.venv/Scripts`（Windows）或 `.venv/bin`（macOS/Linux）。`backend/run.py` 已加入自动把当前解释器所在目录加入 PATH 的逻辑，方便 venv / EXE 打包场景。
 
-> 若想做成**单机桌面版（EXE）** 直接分发给用户、免去服务器，见部署指南「桌面版（EXE）打包思路」。
+### 本地测试指引
 
-### 在线测试指引
+1. 启动后端，浏览器打开 `http://localhost:8000`。
+2. 在顶部「素材目录」选择或创建包含 `前贴/`、`口播开头/`、`口播中间/`、`口播结尾/` 四个文件夹的目录（默认使用项目根目录下的 `materials/`）。
+3. 点击「刷新」扫描素材库。
+4. 中间「爆款合成」：选**框架1（4 段）**或**框架2（3 段）**；数量随意；**成片时长限制建议选「不限」或 ≥60 秒**（测试素材单组合约 33~50 秒，选 30 秒会被判不可行）。
+5. 点「开始合成」，右侧「产出进度」实时轮询，完成后点「下载」即可取回成片。
+6. 也可在素材库里「导入」上传你自己的视频，或「修改」素材根目录。
 
-1. 打开上面的公网链接。
-2. 左侧「素材库」已自动扫到 **9 段测试素材**（前贴 2 / 口播开头 2 / 口播中间 3 / 口播结尾 2）。
-3. 中间「爆款合成」：选**框架1（4 段）**或**框架2（3 段）**；数量随意；**成片时长限制建议选「不限」或 ≥60 秒**（测试素材单组合约 33~50 秒，选 30 秒会被判不可行）。
-4. 点「开始合成」，右侧「产出进度」实时轮询，完成后点「下载」即可取回成片。
-5. 也可在素材库里「导入」上传你自己的视频，或「修改」素材根目录。
+> 说明：默认素材目录为 `materials/`，成片输出到 `output/`，设置保存在 `backend/data/settings.json`，均相对项目根目录，方便打包 EXE。
 
-> 说明：当前测试素材为 ffmpeg 生成的彩条测试片（位于沙箱素材目录）。要测真实素材，用素材库的「导入」上传，或把视频放进对应分类文件夹后点「刷新」。
+## EXE 化方向（未来）
+
+最终计划打包成 Windows 单机可执行文件，候选路线：
+
+1. **PyInstaller / Nuitka**：把 FastAPI 后端、前端 `dist`、ffmpeg/ffprobe 一起打包，启动后打开系统浏览器或内嵌 WebView。
+2. **Tauri / Electron**：用桌面壳嵌入前端，后端仍用 Python 子进程提供 API。
+3. **PyWebView**：Python 后端 + 轻量内嵌浏览器，体积最小。
+
+具体方案待后续版本评估，相关脚本与配置会逐步加入仓库。

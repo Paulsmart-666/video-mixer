@@ -1,5 +1,6 @@
 # 依赖
 node_modules/
+backend/.venv/
 __pycache__/
 *.pyc
 backend/data/probe_cache.json
@@ -25,6 +26,9 @@ output/
 # 沙箱/环境配置
 .cloudstudio
 .codebuddy/
+frontend/.npmrc
+frontend/pnpm-workspace.yaml
+frontend/node_modules_trash*/
 
 # TypeScript 构建缓存
 *.tsbuildinfo
@@ -32,3 +36,9 @@ output/
 # 杂项
 package-lock.json
 npm-debug.log*
+
+# 临时脚本（测试/环境修复用，不入库）
+_temp_scripts/
+copy_ffmpeg.py
+gen_test_materials.py
+test_path.py

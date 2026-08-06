@@ -5,14 +5,18 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+# 项目根目录（backend/app/config.py -> 项目根）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
 class AppSettings(BaseModel):
-    material_root: str = "/workspace/materials"
-    output_dir: str = "/workspace/output"
+    material_root: str = str(PROJECT_ROOT / "materials")
+    output_dir: str = str(PROJECT_ROOT / "output")
     concurrency: int = Field(default=2, ge=1, le=16)
 
 
 class ConfigStore:
-    def __init__(self, path: str = "/workspace/backend/data/settings.json"):
+    def __init__(self, path: str = str(PROJECT_ROOT / "backend" / "data" / "settings.json")):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._settings = self._load()

@@ -40,6 +40,6 @@ app.include_router(compose.router)
 app.include_router(files.router)
 
 
-dist_path = Path("/workspace/frontend/dist")
+dist_path = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if dist_path.exists():
     app.mount("/", StaticFiles(directory=str(dist_path), html=True), name="static")
