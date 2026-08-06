@@ -10,20 +10,24 @@ import type {
 } from '@/types';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
+  // FormData 需要浏览器自动设置 multipart 边界，不能手动指定 Content-Type
+  const isFormData = init?.body instanceof FormData;
   const res = await fetch(url, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(init?.body && !isFormData ? { 'Content-Type': 'application/json' } : {}),
       ...(init?.headers ?? {}),
     },
   });
   if (!res.ok) {
-    let detail = '';
+    // 先以 text 读取，避免 res.json() 失败后再读 res.text() 报 body stream already read
+    const text = await res.text();
+    let detail = text;
     try {
-      const data = await res.json();
+      const data = JSON.parse(text);
       detail = typeof data.detail === 'string' ? data.detail : JSON.stringify(data);
     } catch {
-      detail = await res.text();
+      // 保留原始文本作为错误信息
     }
     throw new Error(detail || `请求失败 (${res.status})`);
   }
