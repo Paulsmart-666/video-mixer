@@ -16,6 +16,7 @@ export function TopBar() {
     try {
       await updateSettings({ material_root: path });
       await updateStoreSettings({ material_root: path });
+      await refreshLibrary();
     } catch (e) {
       alert('切换目录失败: ' + (e as Error).message);
     }
