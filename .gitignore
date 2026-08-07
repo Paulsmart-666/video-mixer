@@ -42,3 +42,6 @@ _temp_scripts/
 copy_ffmpeg.py
 gen_test_materials.py
 test_path.py
+
+# 部署用隧道二进制（cloudflared），不入库
+.bin/
