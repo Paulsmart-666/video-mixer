@@ -6,6 +6,7 @@ from typing import List
 
 from ..models import MaterialClip
 from .encoder_profile import detect_encoder_profile
+from .ffmpeg_path import get_ffmpeg_exe
 
 
 def _resolve_watermark_font() -> str:
@@ -152,7 +153,7 @@ def build_filter_complex_cmd(
     filter_complex = ";".join(filter_complex_parts)
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-y",
+        get_ffmpeg_exe(), "-hide_banner", "-y",
         *inputs,
         "-filter_complex", filter_complex,
         "-map", "[vc]", "-map", "[ac]",
@@ -179,7 +180,7 @@ def build_concat_demuxer_cmd(clips: List[MaterialClip], output_path: str) -> tup
         f.write("\n".join(lines) + "\n")
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-y",
+        get_ffmpeg_exe(), "-hide_banner", "-y",
         "-f", "concat", "-safe", "0",
         "-i", list_path,
         "-c", "copy",

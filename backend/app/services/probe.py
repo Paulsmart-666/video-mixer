@@ -1,8 +1,9 @@
 import json
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from .ffmpeg_path import get_ffprobe_exe
 
 
 @dataclass
@@ -32,9 +33,7 @@ def _parse_fps(r_frame_rate: str) -> float:
 
 
 def probe_media(path: str) -> MediaInfo:
-    ffprobe = shutil.which("ffprobe")
-    if not ffprobe:
-        raise RuntimeError("ffprobe 未安装")
+    ffprobe = get_ffprobe_exe()
 
     cmd = [
         ffprobe,

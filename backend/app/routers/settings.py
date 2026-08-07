@@ -1,16 +1,21 @@
-import shutil
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
 from ..config import config_store
 from ..services.encoder_profile import detect_encoder_profile
+from ..services.ffmpeg_path import get_ffmpeg_exe, get_ffprobe_exe
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
 
 def _check_ffmpeg():
-    return bool(shutil.which("ffmpeg") and shutil.which("ffprobe"))
+    try:
+        get_ffmpeg_exe()
+        get_ffprobe_exe()
+        return True
+    except Exception:
+        return False
 
 
 @router.get("")

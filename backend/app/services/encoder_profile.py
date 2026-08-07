@@ -1,8 +1,9 @@
-import shutil
 import subprocess
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import List
+
+from .ffmpeg_path import get_ffmpeg_exe
 
 
 @dataclass
@@ -14,7 +15,7 @@ class EncoderProfile:
 
 @lru_cache(maxsize=1)
 def _available_encoders() -> set:
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = get_ffmpeg_exe()
     if not ffmpeg:
         return set()
     try:
@@ -36,7 +37,7 @@ def _available_encoders() -> set:
 
 
 def _encoder_works(encoder: str) -> bool:
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg = get_ffmpeg_exe()
     if not ffmpeg:
         return False
     args = [ffmpeg, "-hide_banner", "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=30", "-c:v", encoder]
