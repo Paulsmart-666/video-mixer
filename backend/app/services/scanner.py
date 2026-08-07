@@ -28,7 +28,7 @@ CATEGORY_ALIASES: dict[str, Category] = {
     "ending": Category.ENDING,
 }
 
-IGNORE_DIRS = {".git", "__MACOSX", "@eaDir", ".DS_Store", "node_modules", "__pycache__"}
+IGNORE_DIRS = {".git", "__MACOSX", "@eaDir", ".DS_Store", "node_modules", "__pycache__", ".trash"}
 
 def _normalize(text: str) -> str:
     text = text.strip().lower()

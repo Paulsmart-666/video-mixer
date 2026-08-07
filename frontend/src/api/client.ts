@@ -66,6 +66,7 @@ export function deleteClips(clip_ids: string[]): Promise<{
   ok: boolean;
   deleted: string[];
   not_found: string[];
+  failed?: { id: string; path: string; reason: string }[];
 }> {
   return request('/api/library/clips', {
     method: 'DELETE',

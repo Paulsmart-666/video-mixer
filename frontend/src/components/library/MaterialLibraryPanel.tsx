@@ -46,9 +46,15 @@ export function MaterialLibraryPanel() {
     setBatchDeleting(true);
     setError('');
     try {
-      await deleteClips(Array.from(selectedIds));
+      const result = await deleteClips(Array.from(selectedIds));
       setSelectedIds(new Set());
       await refreshLibrary();
+      if (result.failed && result.failed.length > 0) {
+        const names = result.failed
+          .map((f) => f.path.split(/[\\/]/).pop() || f.id)
+          .join('、');
+        setError(`${result.failed.length} 个素材删除失败：${names}`);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {

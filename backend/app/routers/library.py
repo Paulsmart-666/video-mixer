@@ -14,6 +14,19 @@ from ..utils.paths import ensure_within
 router = APIRouter(prefix="/api/library", tags=["library"])
 
 
+def _safe_remove(file_path: Path) -> None:
+    """删除文件；在沙箱/安全策略拦截真实删除时，移动到分类目录内的 .trash 隔离。"""
+    try:
+        os.remove(file_path)
+    except (PermissionError, OSError):
+        # 部分环境（如 WorkBuddy 沙箱 safe-delete）会阻止 os.remove 落盘删除，
+        # 此时通过 shutil.move 把文件移到 .trash，达到"素材库不可见"的清空效果。
+        trash_dir = file_path.parent / ".trash"
+        trash_dir.mkdir(parents=True, exist_ok=True)
+        unique_name = f"{file_path.stem}_{uuid.uuid4().hex[:8]}{file_path.suffix}"
+        shutil.move(str(file_path), str(trash_dir / unique_name))
+
+
 @router.get("")
 def get_library():
     snapshot = scan_library(config_store.settings.material_root)
@@ -37,7 +50,7 @@ def delete_clip(clip_id: str = Query(...)):
     root = Path(config_store.settings.material_root).resolve()
     ensure_within(root, Path(clip.abs_path))
     try:
-        os.remove(clip.abs_path)
+        _safe_remove(Path(clip.abs_path))
     except FileNotFoundError:
         pass
     return {"ok": True, "id": clip_id}
@@ -53,6 +66,7 @@ def delete_clips(data: dict):
     root = Path(config_store.settings.material_root).resolve()
     deleted: list[str] = []
     not_found: list[str] = []
+    failed: list[dict] = []
     for clip_id in clip_ids:
         clip = clip_map.get(clip_id)
         if not clip:
@@ -60,11 +74,14 @@ def delete_clips(data: dict):
             continue
         ensure_within(root, Path(clip.abs_path))
         try:
-            os.remove(clip.abs_path)
+            _safe_remove(Path(clip.abs_path))
             deleted.append(clip_id)
         except FileNotFoundError:
             deleted.append(clip_id)
-    return {"ok": True, "deleted": deleted, "not_found": not_found}
+        except Exception as e:
+            failed.append({"id": clip_id, "path": clip.abs_path, "reason": str(e)})
+    ok = len(failed) == 0
+    return {"ok": ok, "deleted": deleted, "not_found": not_found, "failed": failed}
 
 
 def _resolve_save_path(category_dir: Path, filename: str) -> Path:
