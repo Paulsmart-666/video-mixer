@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional
 
+from ..config import PROJECT_ROOT
 from ..models import Category, CategoryGroup, LibrarySnapshot, MaterialClip
 from .probe import probe_media
 
@@ -75,7 +76,9 @@ def _save_probe_cache(cache_path: Path, cache: dict) -> None:
     cache_path.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def scan_library(root: str, cache_path: str = "/workspace/backend/data/probe_cache.json", force: bool = False) -> LibrarySnapshot:
+def scan_library(root: str, cache_path: str = "", force: bool = False) -> LibrarySnapshot:
+    if not cache_path:
+        cache_path = str(PROJECT_ROOT / "backend" / "data" / "probe_cache.json")
     root_path = Path(root)
     if not root_path.is_dir():
         return LibrarySnapshot(

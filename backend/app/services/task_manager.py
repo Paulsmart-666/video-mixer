@@ -41,9 +41,13 @@ class TaskManager:
         snapshot = scan_library(config_store.settings.material_root)
         clip_map = {clip.id: clip for group in snapshot.groups for clip in group.clips}
 
+        # 导出目录：前端未指定时回退到设置里的 output_dir，并确保目录存在
+        out_dir = request.output_dir or config_store.settings.output_dir
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+
         self._ensure_pool()
         for task in tasks:
-            task.output_path = str(Path(request.output_dir) / task.filename)
+            task.output_path = str(Path(out_dir) / task.filename)
             task.download_url = f"/api/files/download?path={task.output_path}"
             self._pool.submit(self._worker, batch_id, task.id, clip_map)
 

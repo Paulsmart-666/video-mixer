@@ -96,9 +96,17 @@ export function cancelBatch(batch_id: string): Promise<BatchState> {
   return request<BatchState>(`/api/compose/batches/${batch_id}/cancel`, { method: 'POST' });
 }
 
-export function browseFiles(path: string): Promise<BrowseResponse> {
+export function browseFiles(path: string, root: string = ''): Promise<BrowseResponse> {
   const qs = new URLSearchParams({ path });
+  if (root) qs.set('root', root);
   return request<BrowseResponse>(`/api/files/browse?${qs.toString()}`);
+}
+
+export function uploadBgm(file: File): Promise<{ path: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  // FormData 由浏览器自动设置 multipart 边界，不能手动指定 Content-Type
+  return request<{ path: string }>('/api/files/upload-bgm', { method: 'POST', body: form });
 }
 
 // 拼接成片下载链接（后端 /api/files/download?path=...）

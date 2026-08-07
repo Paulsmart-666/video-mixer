@@ -114,7 +114,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
         max_duration: form.max_duration,
         options: form.options,
         naming_rule: form.naming_rule,
-        output_dir: form.output_dir,
+        output_dir: form.output_dir || get().settings?.output_dir || '',
       });
       set({ currentBatch: batch });
       const timer = setInterval(async () => {
@@ -155,11 +155,18 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   updateSettings: async (partial) => {
-    set((s) => ({
-      settings: s.settings
-        ? { ...s.settings, ...partial }
-        : (partial as SettingsResponse),
-    }));
+    try {
+      const updated = await api.updateSettings(partial);
+      set({ settings: updated });
+    } catch (e) {
+      console.error('保存设置失败', e);
+      // 后端保存失败时仍更新本地状态，避免 UI 卡死
+      set((s) => ({
+        settings: s.settings
+          ? { ...s.settings, ...partial }
+          : (partial as SettingsResponse),
+      }));
+    }
   },
 
   pickLocalDir: async () => {

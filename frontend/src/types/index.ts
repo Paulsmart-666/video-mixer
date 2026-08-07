@@ -140,5 +140,6 @@ export interface BrowseItem {
 
 export interface BrowseResponse {
   path: string;
+  parent: string;
   items: BrowseItem[];
 }

@@ -1,9 +1,37 @@
+import os
+import sys
 import tempfile
 from pathlib import Path
 from typing import List
 
 from ..models import MaterialClip
 from .encoder_profile import detect_encoder_profile
+
+
+def _resolve_watermark_font() -> str:
+    """按平台挑选一个存在的中文字体，找不到则返回空串（退回 ffmpeg 默认字体）。"""
+    candidates: List[str] = []
+    if os.name == "nt":
+        candidates = [
+            r"C:/Windows/Fonts/msyh.ttc",
+            r"C:/Windows/Fonts/simhei.ttf",
+            r"C:/Windows/Fonts/arial.ttf",
+        ]
+    elif sys.platform == "darwin":
+        candidates = [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/Library/Fonts/Arial Unicode.ttf",
+        ]
+    else:
+        candidates = [
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return ""
 
 
 def _target_canvas(clips: List[MaterialClip]) -> tuple[int, int]:
@@ -105,14 +133,21 @@ def build_filter_complex_cmd(
     if enable_subtitle:
         pass
 
-    # 水印（首期占位）
+    # 水印
     if enable_watermark and watermark_text:
-        font = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
         text = _escape_drawtext(watermark_text)
-        filter_complex_parts.append(
-            f"[vc]drawtext=fontfile={font}:text='{text}':"
-            f"x=w-tw-40:y=40:fontsize=36:fontcolor=white@0.6[vc]"
-        )
+        font = _resolve_watermark_font()
+        if font:
+            filter_complex_parts.append(
+                f"[vc]drawtext=fontfile={font}:text='{text}':"
+                f"x=w-tw-40:y=40:fontsize=36:fontcolor=white@0.6[vc]"
+            )
+        else:
+            # 找不到字体文件时退回 ffmpeg 默认字体，避免 Windows 下直接报错
+            filter_complex_parts.append(
+                f"[vc]drawtext=text='{text}':"
+                f"x=w-tw-40:y=40:fontsize=36:fontcolor=white@0.6[vc]"
+            )
 
     filter_complex = ";".join(filter_complex_parts)
 

@@ -12,6 +12,7 @@ interface DirPickerDialogProps {
 
 export function DirPickerDialog({ initialPath, onSelect, onClose }: DirPickerDialogProps) {
   const [current, setCurrent] = useState(initialPath);
+  const [parent, setParent] = useState('');
   const [items, setItems] = useState<BrowseItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -21,13 +22,14 @@ export function DirPickerDialog({ initialPath, onSelect, onClose }: DirPickerDia
     browseFiles(current)
       .then((res) => {
         setItems(res.items.filter((i) => i.is_dir));
+        setParent(res.parent);
         setError('');
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [current]);
 
-  const parent = current.split('/').slice(0, -1).join('/') || '/';
+  const atRoot = parent === current;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -38,7 +40,7 @@ export function DirPickerDialog({ initialPath, onSelect, onClose }: DirPickerDia
         </div>
 
         <div className="flex items-center gap-2 px-4 py-2 text-sm text-muted">
-          <Button variant="ghost" size="sm" onClick={() => setCurrent(parent)} disabled={current === '/'}>
+          <Button variant="ghost" size="sm" onClick={() => !atRoot && setCurrent(parent)} disabled={atRoot}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="truncate">{current}</span>
