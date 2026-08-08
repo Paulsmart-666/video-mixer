@@ -1,13 +1,18 @@
 import mimetypes
 import os
 import shutil
+import urllib.parse
 import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse, Response
 
 from ..config import PROJECT_ROOT, config_store
 from ..utils.paths import ensure_within
+
+# 超过此大小的响应改走流式 FileResponse 兜底，避免一次性读入内存
+_MAX_INLINE_BYTES = 200 * 1024 * 1024
 
 router = APIRouter(prefix="/api/files", tags=["files"])
 
@@ -79,8 +84,33 @@ def download_file(path: str = Query(...)):
     ensure_within(output_base, target)
 
     media_type, _ = mimetypes.guess_type(str(target))
+    media_type = media_type or "application/octet-stream"
+
+    # 中文/特殊文件名按 RFC 5987 编码，避免部分网关解析 Content-Disposition 失败
+    ascii_name = target.name.encode("ascii", "ignore").decode() or "download"
+    encoded_name = urllib.parse.quote(target.name)
+
+    # 小文件一次性读入内存返回普通 Response（非流式），
+    # 规避网关对分块流式响应 / 中文文件名的兼容问题
+    try:
+        size = target.stat().st_size
+        if size <= _MAX_INLINE_BYTES:
+            data = target.read_bytes()
+            headers = {
+                "Content-Disposition": (
+                    f"attachment; filename=\"{ascii_name}\"; "
+                    f"filename*=UTF-8''{encoded_name}"
+                ),
+                "Content-Length": str(size),
+                "Accept-Ranges": "none",
+            }
+            return Response(content=data, media_type=media_type, headers=headers)
+    except Exception:
+        # 读取出错则回退到 FileResponse
+        pass
+
     return FileResponse(
         path=str(target),
         filename=target.name,
-        media_type=media_type or "application/octet-stream",
+        media_type=media_type,
     )
