@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from ..config import config_store
+from ..config import PROJECT_ROOT, config_store
 from ..models import BatchState, BatchSummary, ComposeRequest, TaskItem, TaskStatus
 from .composer import Composer
 from .scanner import scan_library
@@ -41,8 +41,8 @@ class TaskManager:
         snapshot = scan_library(config_store.settings.material_root)
         clip_map = {clip.id: clip for group in snapshot.groups for clip in group.clips}
 
-        # 导出目录：前端未指定时回退到设置里的 output_dir，并确保目录存在
-        out_dir = request.output_dir or config_store.settings.output_dir
+        # 导出目录：前端未指定 -> 设置里的 output_dir -> 项目默认 output 目录
+        out_dir = request.output_dir or config_store.settings.output_dir or str(PROJECT_ROOT / "output")
         Path(out_dir).mkdir(parents=True, exist_ok=True)
 
         self._ensure_pool()
