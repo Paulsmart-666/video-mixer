@@ -80,7 +80,9 @@ def download_file(path: str = Query(...)):
     if not target.is_file():
         raise HTTPException(status_code=400, detail="只能下载文件")
 
-    output_base = Path(config_store.settings.output_dir).resolve()
+    # settings.output_dir 可能为空（历史遗留配置），空串会被解析成进程工作目录，
+    # 导致位于 /workspace/output 的产物被判为“路径越界”。回退到项目默认输出目录。
+    output_base = Path(config_store.settings.output_dir or str(PROJECT_ROOT / "output")).resolve()
     ensure_within(output_base, target)
 
     media_type, _ = mimetypes.guess_type(str(target))
