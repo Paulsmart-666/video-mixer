@@ -115,3 +115,9 @@ export function downloadUrl(path: string | null): string {
   const qs = new URLSearchParams({ path: path ?? '' });
   return `/api/files/download?${qs.toString()}`;
 }
+
+// 拼接批次批量下载链接（后端 /api/files/download-zip?batch_id=...）
+export function batchDownloadUrl(batchId: string): string {
+  const qs = new URLSearchParams({ batch_id: batchId });
+  return `/api/files/download-zip?${qs.toString()}`;
+}
