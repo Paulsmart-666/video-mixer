@@ -74,7 +74,17 @@ class Composer:
                 bufsize=1,
             )
 
-            stderr_lines: List[str] = []
+            # 并发排空 stderr，避免长编码时管道缓冲被写满导致 ffmpeg 阻塞（死锁）。
+            # stdout 在同一线程里逐行读进度；stderr 交给守护线程读，两端同时流动。
+            stderr_buf: List[str] = []
+
+            def _drain_stderr() -> None:
+                if proc.stderr:
+                    stderr_buf.append(proc.stderr.read())
+
+            stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+            stderr_thread.start()
+
             est_duration = max(task.est_duration, 0.1)
 
             if proc.stdout:
@@ -91,7 +101,8 @@ class Composer:
                     elif line.startswith("progress=end"):
                         on_progress(1.0)
 
-            stderr_lines.append(proc.stderr.read() if proc.stderr else "")
+            stderr_thread.join()
+            stderr_text = "".join(stderr_buf)
             returncode = proc.wait()
 
             if cancel_event.is_set():
@@ -101,7 +112,7 @@ class Composer:
                 return
 
             if returncode != 0:
-                err = "\n".join(stderr_lines[-30:]) or f"ffmpeg 返回非零退出码 {returncode}"
+                err = stderr_text[-3000:] or f"ffmpeg 返回非零退出码 {returncode}"
                 task.status = TaskStatus.FAILED
                 task.error = err
                 if part_path.exists():
