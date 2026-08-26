@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { CheckCircle, Download, Loader2, PauseCircle, XCircle, FileVideo } from 'lucide-react';
 import { downloadUrl } from '@/api/client';
 import type { TaskItem } from '@/types';
@@ -36,8 +36,41 @@ function statusText(status: string) {
   return map[status] || status;
 }
 
+function safeDownloadName(name: string): string {
+  // 移除 Windows 文件系统非法字符，保留中文与扩展名
+  const cleaned = name.replace(/[\\/<>|:"?*]/g, '_').replace(/\s+/g, ' ').trim();
+  return cleaned || 'video.mp4';
+}
+
 export function TaskRow({ task }: TaskRowProps) {
   const [showError, setShowError] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const handleDownload = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!task.output_path) return;
+
+    setDownloadError(null);
+    try {
+      const resp = await fetch(downloadUrl(task.output_path));
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        setDownloadError(`下载失败 (${resp.status}): ${text.slice(0, 120)}`);
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = safeDownloadName(task.filename || 'video.mp4');
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDownloadError(`下载出错: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [task.output_path, task.filename]);
 
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-panel p-3">
@@ -72,14 +105,13 @@ export function TaskRow({ task }: TaskRowProps) {
             </button>
           )}
           {task.status === 'done' && task.output_path && (
-            <a
-              href={downloadUrl(task.output_path)}
-              download
+            <button
+              onClick={handleDownload}
               className="flex items-center gap-1 text-primary hover:text-primaryHover"
             >
               <Download className="h-3.5 w-3.5" />
               下载
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -87,6 +119,11 @@ export function TaskRow({ task }: TaskRowProps) {
       {showError && task.error && (
         <div className="max-h-32 overflow-auto rounded-md bg-red-50 p-2 text-xs text-red-600">
           {task.error}
+        </div>
+      )}
+      {downloadError && (
+        <div className="max-h-32 overflow-auto rounded-md bg-red-50 p-2 text-xs text-red-600">
+          {downloadError}
         </div>
       )}
     </div>
